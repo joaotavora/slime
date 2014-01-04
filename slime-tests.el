@@ -137,6 +137,7 @@ conditions (assertions)."
 (put 'def-slime-test 'lisp-indent-function 4)
 
 (defmacro slime-check (check &rest body)
+  (declare (indent defun))
   `(unless (progn ,@body)
      (ert-fail ,(cl-etypecase check
                   (cons `(concat "Ooops, " ,(cons 'format check)))
@@ -145,11 +146,8 @@ conditions (assertions)."
 
 
 ;;;;; Test case definitions
-;; Clear out old tests.
-(setq slime-tests nil)
-
 (defun slime-check-top-level () ;(&optional _test-name)
-  (slime-accept-process-output nil 0.001)
+  (accept-process-output nil 0.001)
   (slime-check "At the top level (no debugging or pending RPCs)"
     (slime-at-top-level-p)))
 
@@ -168,7 +166,7 @@ conditions (assertions)."
             (t
              ;; XXX if a process-filter enters a recursive-edit, we
              ;; hang forever
-             (slime-accept-process-output nil 0.1))))))
+             (accept-process-output nil 0.1))))))
 
 (defun slime-sync-to-top-level (timeout)
   (slime-wait-condition "top-level" #'slime-at-top-level-p timeout))
@@ -387,7 +385,7 @@ after quitting Slime's temp buffer."
     ;; Postconditions
     (slime-check ("Definition of `%S' is in swank.lisp." name)
       (string= (file-name-nondirectory (buffer-file-name)) "swank.lisp"))
-    (slime-check "Definition now at point." (looking-at snippet))
+    (slime-check ("Looking at '%s'." snippet) (looking-at snippet))
     (slime-pop-find-definition-stack)
     (slime-check "Returning from definition restores original buffer/position."
       (and (eq orig-buffer (current-buffer))
@@ -692,7 +690,7 @@ Confirm that SUBFORM is correctly located."
     '(())
   (slime-check-top-level)
   (slime-eval-async '(cl:loop) (lambda (_) ) "CL-USER")
-  (slime-accept-process-output nil 1)
+  (accept-process-output nil 1)
   (slime-check "In eval state." (slime-busy-p))
   (slime-interrupt)
   (slime-wait-condition "First interrupt" (lambda () (slime-sldb-level= 1)) 5)
@@ -735,7 +733,7 @@ Confirm that SUBFORM is correctly located."
  (cerror \"foo\" \"restart\")\
  (cerror \"bar\" \"restart\")\
  (+ 1 2))")
-      (while (not done) (slime-accept-process-output))
+      (while (not done) (accept-process-output))
       (slime-sync-to-top-level 5)
       (slime-check-top-level)
       (unless noninteractive
@@ -756,7 +754,7 @@ Confirm that SUBFORM is correctly located."
       (slime-interactive-eval
        (format "(progn (cerror \"foo\" %S %s) (+ 1 2))"
                format-control format-argument))
-      (while (not done) (slime-accept-process-output))
+      (while (not done) (accept-process-output))
       (slime-sync-to-top-level 5)
       (slime-check-top-level)
       (unless noninteractive
@@ -768,7 +766,7 @@ Confirm that SUBFORM is correctly located."
     ()
     "Test interrupting a loop that sends a lot of output to Emacs."
     '(())
-  (slime-accept-process-output nil 1)
+  (accept-process-output nil 1)
   (slime-check-top-level)
   (slime-eval-async '(cl:loop :for i :from 0 :do (cl:progn (cl:print i)
                                                            (cl:finish-output)))
@@ -928,7 +926,7 @@ the buffer's undo-list."
     "Test whether BREAK invokes SLDB."
     (let ((exp1 '(break)))
       `((1 ,exp1) (2 ,exp1) (3 ,exp1)))
-  (slime-accept-process-output nil 0.2)
+  (accept-process-output nil 0.2)
   (slime-check-top-level)
   (slime-eval-async
    `(cl:eval (cl:read-from-string
@@ -965,7 +963,7 @@ on *DEBUGGER-HOOK*."
     ()
     "Test that binding *DEBUGGER-HOOK* locally works properly."
     '(())
-  (slime-accept-process-output nil 1)
+  (accept-process-output nil 1)
   (slime-check-top-level)
   (slime-compile-string
    (prin1-to-string `(defun cl-user::quux ()
@@ -1113,7 +1111,7 @@ Reconnect afterwards."
       (erase-buffer))
     (delete-process c)
     (assert (equal (process-status c) 'closed) nil "Connection not closed")
-    (slime-accept-process-output nil 0.1)
+    (accept-process-output nil 0.1)
     (assert (equal (process-status p) 'run) nil "Subprocess not running")
     (with-current-buffer (process-buffer p)
       (assert (< (buffer-size) 500) nil "Unusual output"))

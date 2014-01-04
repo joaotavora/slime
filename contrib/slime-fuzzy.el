@@ -372,7 +372,7 @@ done."
       (when (boundp 'window-configuration-change-hook)
         (add-hook 'window-configuration-change-hook
                   'slime-fuzzy-window-configuration-change))
-      (slime-add-local-hook 'kill-buffer-hook 'slime-fuzzy-abort)
+      (add-hook 'kill-buffer-hook 'slime-fuzzy-abort 'append t)
       (set (make-local-variable 'cursor-type) nil)
       (setq buffer-quit-function 'slime-fuzzy-abort)) ; M-Esc Esc
     (when slime-fuzzy-completion-in-place

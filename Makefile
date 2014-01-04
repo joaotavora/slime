@@ -9,7 +9,7 @@ OBJ_FILES = $(patsubst contrib/%.el,contrib/%.elc,$(wildcard contrib/*.el))
 ifeq ($(shell $(EMACS_BIN) --version | grep -E 24.\(3.5\|4\)),)
     COLON =
 else
-    COLON = :
+    COLON =
 endif
 LOAD_PATH=-L $(COLON)$(PWD) -L $(COLON)$(PWD)/contrib
 
@@ -27,19 +27,19 @@ compile-%: slime.elc slime-tests.elc contrib/slime-%.elc
 
 # automated tests
 #
-SELECTOR=t
-OPTIONS=--batch
+SELECTOR ?=t
+OPTIONS ?=--batch
 
 check-%: export TEST_CONTRIBS=$(patsubst check-%,slime-%,$@)
 check-%: compile-%
 	TEST_CONTRIBS=$(TEST_CONTRIBS) $(MAKE) check
-check:
+check: clean-fasls
 	${EMACS_BIN} -Q $(LOAD_PATH) $(OPTIONS)			           \
 		     --eval "(require 'slime-tests)"	                   \
 		     --eval "(slime-setup '($(TEST_CONTRIBS)))"		   \
 		     --eval "(setq inferior-lisp-program \"$(LISP_BIN)\")" \
-		     --eval "(slime-batch-test $(SELECTOR))"               \
-		     -f ert-run-tests-batch
+		     --eval "(slime-batch-test $(SELECTOR))"
+
 check-core: export TEST_CONTRIBS=
 check-core: compile-core check
 
@@ -53,7 +53,9 @@ elpa: *.el
 	> "$$dir"/rspec-mode-pkg.el; \
 	tar cvf rspec-mode-$$version.tar --mode 644 "$$dir"
 
-clean:
+clean-fasls:
+	rm -rf *.fasl contrib/*.fasl
+clean: clean-fasls
 	rm -rf *.elc contrib/*.elc
 
 .PHONY: clean elpa compile compile-contribs check

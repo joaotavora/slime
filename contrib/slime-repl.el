@@ -194,9 +194,9 @@ current repl's (as per slime-output-buffer) window."
                                        (current-buffer))
 				     (car (process-contact (slime-connection)))
                                      port))
-        (emacs-coding-system (car (find coding-system
-                                        slime-net-valid-coding-systems
-                                        :key #'third))))
+        (emacs-coding-system (car (cl-find coding-system
+                                           slime-net-valid-coding-systems
+                                           :key #'third))))
     (slime-set-query-on-exit-flag stream)
     (set-process-filter stream 'slime-output-filter)
     (set-process-coding-system stream emacs-coding-system emacs-coding-system)
@@ -445,7 +445,7 @@ joined together."))
   ("\M-r" 'slime-repl-previous-matching-input)
   ("\M-s" 'slime-repl-next-matching-input)
   ("\C-c\C-c" 'slime-interrupt)
-  ;("\t"   'slime-complete-symbol)
+                                        ;("\t"   'slime-complete-symbol)
   ("\t"   'slime-indent-and-complete-symbol)
   ("\M-\t" 'slime-complete-symbol)
   (" "    'slime-space)
@@ -492,8 +492,9 @@ joined together."))
   (set (make-local-variable 'scroll-margin) 0)
   (when slime-repl-history-file
     (slime-repl-safe-load-history)
-    (slime-add-local-hook 'kill-buffer-hook
-                          'slime-repl-safe-save-merged-history))
+    (add-hook 'kill-buffer-hook
+              'slime-repl-safe-save-merged-history
+              'append t))
   (add-hook 'kill-emacs-hook 'slime-repl-save-all-histories)
   (slime-setup-command-hooks)
   ;; At the REPL, we define beginning-of-defun and end-of-defun to be
@@ -503,7 +504,7 @@ joined together."))
        'slime-repl-mode-beginning-of-defun)
   (set (make-local-variable 'end-of-defun-function)
        'slime-repl-mode-end-of-defun)
-  (slime-run-mode-hooks 'slime-repl-mode-hook))
+  (run-mode-hooks 'slime-repl-mode-hook))
 
 (defun slime-repl-buffer (&optional create connection)
   "Get the REPL buffer for the current connection; optionally create."
@@ -517,14 +518,14 @@ joined together."))
 (defun slime-repl-mode-beginning-of-defun (&optional arg)
   (if (and arg (< arg 0))
       (slime-repl-mode-end-of-defun (- arg))
-      (dotimes (i (or arg 1))
-        (slime-repl-previous-prompt))))
+    (dotimes (i (or arg 1))
+      (slime-repl-previous-prompt))))
 
 (defun slime-repl-mode-end-of-defun (&optional arg)
   (if (and arg (< arg 0))
       (slime-repl-mode-beginning-of-defun (- arg))
-      (dotimes (i (or arg 1))
-        (slime-repl-next-prompt))))
+    (dotimes (i (or arg 1))
+      (slime-repl-next-prompt))))
 
 (defun slime-repl-send-string (string &optional command-string)
   (cond (slime-repl-read-mode
@@ -538,7 +539,7 @@ joined together."))
                                  :window-width
                                  ,(with-current-buffer (slime-output-buffer)
                                     (window-width)))
-           `(swank:listener-eval ,string))
+         `(swank:listener-eval ,string))
        (slime-lisp-package))
     ((:ok result)
      (slime-repl-insert-result result))
@@ -601,7 +602,7 @@ If `slime-repl-suppress-prompt' is true, does nothing and returns nil."
   (when (eobp)
     (let ((win (if (eq (window-buffer) (current-buffer))
                    (selected-window)
-                   (get-buffer-window (current-buffer) t))))
+                 (get-buffer-window (current-buffer) t))))
       (when win
         (with-selected-window win
           (set-window-point win (point-max))
@@ -646,7 +647,7 @@ buffer."
     (set 'zmacs-region-stays t)))
 
 (defun slime-repl-in-input-area-p ()
-   (<= slime-repl-input-start-mark (point)))
+  (<= slime-repl-input-start-mark (point)))
 
 (defun slime-repl-at-prompt-start-p ()
   ;; This will not work on non-current prompts.
@@ -829,7 +830,7 @@ used with a prefix argument (C-u), doesn't switch back afterwards."
     (with-current-buffer (slime-output-buffer)
       (unless (eq (current-buffer) (window-buffer))
         (pop-to-buffer (current-buffer) t))
-      (end-of-buffer)
+      (goto-char (point-max))
       ;; Kill pending input in the REPL
       (when (< (marker-position slime-repl-input-start-mark) (point))
         (kill-region slime-repl-input-start-mark (point))
@@ -892,12 +893,12 @@ used with a prefix argument (C-u), doesn't switch back afterwards."
   "Delete the output inserted since the last input."
   (interactive)
   (let ((start (save-excursion
-                (when (>= (point) slime-repl-input-start-mark)
-                  (goto-char slime-repl-input-start-mark))
-                (slime-repl-previous-prompt)
-                (ignore-errors (forward-sexp))
-                (forward-line)
-                (point)))
+                 (when (>= (point) slime-repl-input-start-mark)
+                   (goto-char slime-repl-input-start-mark))
+                 (slime-repl-previous-prompt)
+                 (ignore-errors (forward-sexp))
+                 (forward-line)
+                 (point)))
         (end (1- (slime-repl-input-line-beginning-position))))
     (when (< start end)
       (let ((inhibit-read-only t))
@@ -947,21 +948,13 @@ used with a prefix argument (C-u), doesn't switch back afterwards."
  (defvar slime-repl-input-history '()
    "History list of strings read from the REPL buffer."))
 
-(defun slime-string-trim (character-bag string)
-  (flet ((find-bound (&optional from-end)
-           (position-if-not (lambda (char) (memq char character-bag))
-                            string :from-end from-end)))
-    (let ((start (find-bound))
-          (end (find-bound t)))
-      (if start
-          (subseq string start (1+ end))
-          ""))))
-
 (defun slime-repl-add-to-input-history (string)
   "Add STRING to the input history.
 Empty strings and duplicates are ignored."
   (when slime-repl-history-trim-whitespaces
-    (setq string (slime-string-trim '(?\n ?\ ?\t) string)))
+    (setq string (replace-regexp-in-string "[\t\n\s]*\\(.*?\\)[\t\n\s]*"
+                                           "\\1"
+                                           string)))
   (unless (equal string "")
     (when slime-repl-history-remove-duplicates
       (setq slime-repl-input-history
@@ -1017,7 +1010,7 @@ If REGEXP is non-nil, only lines matching REGEXP are considered."
   (setq last-command this-command))
 
 (defun slime-repl-position-in-history (start-pos direction regexp
-                                       &optional exclude-string)
+                                                 &optional exclude-string)
   "Return the position of the history item matching REGEXP.
 Return -1 resp. the length of the history if no item matches.
 If EXCLUDE-STRING is specified then it's excluded from the search."
@@ -1107,8 +1100,8 @@ history entries while navigating the repl history."
                  (or (gethash entry ht)
                      (progn (setf (gethash entry ht) t)
                             nil)))))
-    (append (remove-if test new-hist)
-            (remove-if test old-hist))))
+    (append (cl-remove-if test new-hist)
+            (cl-remove-if test old-hist))))
 
 (defun slime-repl-load-history (&optional filename)
   "Set the current SLIME REPL history.
@@ -1157,7 +1150,7 @@ truncated.  That part is untested, though!"
         (hist (or history slime-repl-input-history)))
     (unless (file-writable-p file)
       (error (format "History file not writable: %s" file)))
-    (let ((hist (subseq hist 0 (min (length hist) slime-repl-history-size))))
+    (let ((hist (cl-subseq hist 0 (min (length hist) slime-repl-history-size))))
       ;;(message "saving %s to %s\n" hist file)
       (with-temp-file file
         (let ((cs slime-repl-history-file-coding-system)
@@ -1263,23 +1256,23 @@ The handler will use qeuery to ask the use if the error should be ingored."
   (interactive)
   (if (> (point) slime-repl-input-start-mark)
       (insert (string slime-repl-shortcut-dispatch-char))
-      (let ((shortcut (slime-lookup-shortcut
-                       (completing-read "Command: "
-                                        (slime-bogus-completion-alist
-                                         (slime-list-all-repl-shortcuts))
-                                        nil t nil
-                                        'slime-repl-shortcut-history))))
-        (with-struct (slime-repl-shortcut. handler) shortcut
-          (let ((slime-within-repl-shortcut-handler-p t))
-            (call-interactively handler))))))
+    (let ((shortcut (slime-lookup-shortcut
+                     (completing-read "Command: "
+                                      (slime-bogus-completion-alist
+                                       (slime-list-all-repl-shortcuts))
+                                      nil t nil
+                                      'slime-repl-shortcut-history))))
+      (with-struct (slime-repl-shortcut. handler) shortcut
+        (let ((slime-within-repl-shortcut-handler-p t))
+          (call-interactively handler))))))
 
 (defun slime-list-all-repl-shortcuts ()
   (loop for shortcut in slime-repl-shortcut-table
         append (slime-repl-shortcut.names shortcut)))
 
 (defun slime-lookup-shortcut (name)
-  (find-if (lambda (s) (member name (slime-repl-shortcut.names s)))
-           slime-repl-shortcut-table))
+  (cl-find-if (lambda (s) (member name (slime-repl-shortcut.names s)))
+              slime-repl-shortcut-table))
 
 (defmacro defslime-repl-shortcut (elisp-name names &rest options)
   "Define a new repl shortcut. ELISP-NAME is a symbol specifying
@@ -1300,9 +1293,9 @@ of the shortcut \(`:handler'\), and a help text \(`:one-liner'\)."
                           :names (list ,@names)
                           ,@(apply #'append options))))
        (setq slime-repl-shortcut-table
-             (remove-if (lambda (s)
-                          (member ',(car names) (slime-repl-shortcut.names s)))
-                        slime-repl-shortcut-table))
+             (cl-remove-if (lambda (s)
+                             (member ',(car names) (slime-repl-shortcut.names s)))
+                           slime-repl-shortcut-table))
        (push new-shortcut slime-repl-shortcut-table)
        ',elisp-name)))
 
@@ -1325,7 +1318,7 @@ expansion will be added to the REPL's history.)"
 (defun slime-list-repl-short-cuts ()
   (interactive)
   (slime-with-popup-buffer ((slime-buffer-name :repl-help))
-    (let ((table (sort* (copy-list slime-repl-shortcut-table) #'string<
+    (let ((table (sort* (cl-copy-list slime-repl-shortcut-table) #'string<
                         :key (lambda (x)
                                (car (slime-repl-shortcut.names x))))))
       (save-excursion
@@ -1347,7 +1340,7 @@ expansion will be added to the REPL's history.)"
       (save-some-buffers nil (lambda ()
                                (and (memq major-mode slime-lisp-modes)
                                     (not (null buffer-file-name)))))
-      (save-some-buffers)))
+    (save-some-buffers)))
 
 (defslime-repl-shortcut slime-repl-shortcut-help ("help")
   (:handler 'slime-list-repl-short-cuts)
@@ -1365,7 +1358,7 @@ expansion will be added to the REPL's history.)"
   (:one-liner "Show the current directory."))
 
 (defslime-repl-shortcut slime-repl-push-directory
-    ("push-directory" "+d" "pushd")
+  ("push-directory" "+d" "pushd")
   (:handler (lambda (directory)
               (interactive
                (list (read-directory-name
@@ -1378,13 +1371,13 @@ expansion will be added to the REPL's history.)"
   (:one-liner "Save the current directory and set it to a new one."))
 
 (defslime-repl-shortcut slime-repl-pop-directory
-    ("pop-directory" "-d" "popd")
+  ("pop-directory" "-d" "popd")
   (:handler (lambda ()
               (interactive)
               (if (null slime-repl-directory-stack)
                   (message "Directory stack is empty.")
-                  (slime-set-default-directory
-                   (pop slime-repl-directory-stack)))))
+                (slime-set-default-directory
+                 (pop slime-repl-directory-stack)))))
   (:one-liner "Restore the last saved directory."))
 
 (defslime-repl-shortcut nil ("change-package" "!p" "in-package" "in")
@@ -1403,8 +1396,8 @@ expansion will be added to the REPL's history.)"
               (interactive)
               (if (null slime-repl-package-stack)
                   (message "Package stack is empty.")
-                  (slime-repl-set-package
-                   (pop slime-repl-package-stack)))))
+                (slime-repl-set-package
+                 (pop slime-repl-package-stack)))))
   (:one-liner "Restore the last saved package."))
 
 (defslime-repl-shortcut slime-repl-resend ("resend-form")
@@ -1507,60 +1500,60 @@ expansion will be added to the REPL's history.)"
   (interactive)
   (flet ((insert-call (name &key (function t)
                             defclass)
-           (let* ((setf (and function
-                               (consp name)
-                               (= (length name) 2)
-                               (eql (car name) 'setf)))
-                  (symbol (if setf
-                              (cadr name)
-                              name))
-                  (qualified-symbol-name (slime-qualify-cl-symbol-name symbol))
-                  (symbol-name (slime-cl-symbol-name qualified-symbol-name))
-                  (symbol-package (slime-cl-symbol-package
-                                   qualified-symbol-name))
-                  (call (if (equalp (slime-lisp-package) symbol-package)
-                            symbol-name
-                            qualified-symbol-name)))
-             (slime-switch-to-output-buffer)
-             (goto-char slime-repl-input-start-mark)
-             (insert (if function
-                         "("
-                         " "))
-             (when setf
-               (insert "setf ("))
-             (if defclass
-                 (insert "make-instance '"))
-             (insert call)
-             (cond (setf
-                    (insert " ")
-                    (save-excursion (insert ") )")))
-                   (function
-                    (insert " ")
-                    (save-excursion (insert ")"))))
-             (unless function
-               (goto-char slime-repl-input-start-mark)))))
+                      (let* ((setf (and function
+                                        (consp name)
+                                        (= (length name) 2)
+                                        (eql (car name) 'setf)))
+                             (symbol (if setf
+                                         (cadr name)
+                                       name))
+                             (qualified-symbol-name (slime-qualify-cl-symbol-name symbol))
+                             (symbol-name (slime-cl-symbol-name qualified-symbol-name))
+                             (symbol-package (slime-cl-symbol-package
+                                              qualified-symbol-name))
+                             (call (if (equalp (slime-lisp-package) symbol-package)
+                                       symbol-name
+                                     qualified-symbol-name)))
+                        (slime-switch-to-output-buffer)
+                        (goto-char slime-repl-input-start-mark)
+                        (insert (if function
+                                    "("
+                                  " "))
+                        (when setf
+                          (insert "setf ("))
+                        (if defclass
+                            (insert "make-instance '"))
+                        (insert call)
+                        (cond (setf
+                               (insert " ")
+                               (save-excursion (insert ") )")))
+                              (function
+                               (insert " ")
+                               (save-excursion (insert ")"))))
+                        (unless function
+                          (goto-char slime-repl-input-start-mark)))))
     (let ((toplevel (slime-parse-toplevel-form)))
       (if (symbolp toplevel)
           (error "Not in a function definition")
-          (destructure-case toplevel
-            (((:defun :defgeneric :defmacro :define-compiler-macro) symbol)
-             (insert-call symbol))
-            ((:defmethod symbol &rest args)
-             (declare (ignore args))
-             (insert-call symbol))
-            (((:defparameter :defvar :defconstant) symbol)
-             (insert-call symbol :function nil))
-            (((:defclass) symbol)
-             (insert-call symbol :defclass t))
-            (t
-             (error "Not in a function definition")))))))
+        (destructure-case toplevel
+          (((:defun :defgeneric :defmacro :define-compiler-macro) symbol)
+           (insert-call symbol))
+          ((:defmethod symbol &rest args)
+           (declare (ignore args))
+           (insert-call symbol))
+          (((:defparameter :defvar :defconstant) symbol)
+           (insert-call symbol :function nil))
+          (((:defclass) symbol)
+           (insert-call symbol :defclass t))
+          (t
+           (error "Not in a function definition")))))))
 
 (defun slime-inspector-copy-down-to-repl (number)
-   "Evaluate the inspector slot at point via the REPL (to set `*')."
-   (interactive (list (or (get-text-property (point) 'slime-part-number)
-                          (error "No part at point"))))
-   (slime-repl-send-string (format "%s" `(swank:inspector-nth-part ,number)))
-   (slime-repl))
+  "Evaluate the inspector slot at point via the REPL (to set `*')."
+  (interactive (list (or (get-text-property (point) 'slime-part-number)
+                         (error "No part at point"))))
+  (slime-repl-send-string (format "%s" `(swank:inspector-nth-part ,number)))
+  (slime-repl))
 
 (defun sldb-insert-frame-call-to-repl ()
   "Insert a call to a frame at point."
@@ -1570,9 +1563,9 @@ expansion will be added to the REPL's history.)"
     (slime-switch-to-output-buffer)
     (if (>= (point) slime-repl-prompt-start-mark)
         (insert call)
-	(save-excursion
-	  (goto-char (point-max))
-	  (insert call))))
+      (save-excursion
+        (goto-char (point-max))
+        (insert call))))
   (slime-repl))
 
 (defun slime-set-default-directory (directory)
@@ -1667,11 +1660,11 @@ expansion will be added to the REPL's history.)"
 
 (defun slime-repl-choose-coding-system ()
   (let ((candidates (slime-connection-coding-systems)))
-    (or (find (symbol-name (car default-process-coding-system))
-	      candidates
-	      :test (lambda (s1 s2)
-		      (if (fboundp 'coding-system-equal)
-			  (coding-system-equal (intern s1) (intern s2)))))
+    (or (cl-find (symbol-name (car default-process-coding-system))
+                 candidates
+                 :test (lambda (s1 s2)
+                         (if (fboundp 'coding-system-equal)
+                             (coding-system-equal (intern s1) (intern s2)))))
 	(car candidates)
 	(error "Can't find suitable coding-system"))))
 
@@ -1776,9 +1769,9 @@ while ignoring the repl prompt text."
                    (cl:package-name cl:*package*)" package-name))
               (slime-lisp-package))))
       (slime-check ("slime-lisp-package is %S." package-name)
-        (equal (slime-lisp-package) package-name))
+                   (equal (slime-lisp-package) package-name))
       (slime-check ("slime-lisp-package-prompt-string is in %S." nicknames)
-        (member (slime-lisp-package-prompt-string) nicknames)))))
+                   (member (slime-lisp-package-prompt-string) nicknames)))))
 
 (defmacro with-canonicalized-slime-repl-buffer (&rest body)
   "Evaluate BODY within a fresh REPL buffer. The REPL prompt is
@@ -1787,11 +1780,11 @@ package, though."
   (declare (debug (&rest form)) (indent 0))
   `(let ((%old-prompt% (slime-lisp-package-prompt-string)))
      (unwind-protect
-          (progn (with-current-buffer (slime-output-buffer)
-                   (setf (slime-lisp-package-prompt-string) "SWANK"))
-                 (kill-buffer (slime-output-buffer))
-                 (with-current-buffer (slime-output-buffer)
-                   ,@body))
+         (progn (with-current-buffer (slime-output-buffer)
+                  (setf (slime-lisp-package-prompt-string) "SWANK"))
+                (kill-buffer (slime-output-buffer))
+                (with-current-buffer (slime-output-buffer)
+                  ,@body))
        (setf (slime-lisp-package-prompt-string) %old-prompt%))))
 
 (def-slime-test repl-test
@@ -1878,14 +1871,14 @@ SWANK> *[]"))
   (let* ((marks '((point . ?*)
                   (slime-output-start . ?{) (slime-output-end . ?})
                   (slime-repl-input-start-mark . ?\[) (point-max . ?\])))
-         (marks (remove-if-not (lambda (m) (position (cdr m) expected))
-                               marks))
+         (marks (cl-remove-if-not (lambda (m) (position (cdr m) expected))
+                                  marks))
          (marks (sort (copy-sequence marks)
                       (lambda (x y)
                         (< (position (cdr x) expected)
                            (position (cdr y) expected)))))
-         (content (remove-if (lambda (c) (member* c marks :key #'cdr))
-                             expected))
+         (content (cl-remove-if (lambda (c) (member* c marks :key #'cdr))
+                                expected))
          (marks (do ((result '() (acons (caar m) (1+ (position (cdar m) s))
                                         result))
                      (m marks (cdr m))
@@ -1914,11 +1907,11 @@ if point is not at the end of the line."
     '(("(+ 1 2)" "" "SWANK> (+ 1 2)
 3
 SWANK> ")
-("(+ 1 " "2)" "SWANK> (+ 1 2)
+      ("(+ 1 " "2)" "SWANK> (+ 1 2)
 3
 SWANK> ")
 
-("(+ 1\n" "2)" "SWANK> (+ 1
+      ("(+ 1\n" "2)" "SWANK> (+ 1
 2)
 3
 SWANK> "))
