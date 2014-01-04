@@ -16,9 +16,9 @@ install:
   - curl -o cl-lib.el http://elpa.gnu.org/packages/cl-lib-0.3.el
 before_script:
 script:
-  - ./test.sh -bSC emacs sbcl
+  - EMACS_BIN=emacs LISP_BIN=sbcl make check-core
   - rm ert.el; rm ert-x.el; rm cl-lib.el
-  - ./test.sh -bSC emacs-snapshot sbcl
+  - EMACS_BIN=emacs-snapshot LISP_BIN=sbcl make check-core
 notifications:
   email:
     - slime-devel@common-lisp.net

@@ -70,8 +70,9 @@ Exits Emacs when finished. The exit code is the number of failed tests."
         (if noninteractive
             (kill-emacs (ert-stats-completed-unexpected stats)))))))
 
-(defun slime-test-ert-test-for (name input i doc body fails-for style fname)
-  `(ert-deftest ,(intern (format "%s-%d" name i)) ()
+(eval-and-compile
+  (defun slime-test-ert-test-for (name input i doc body fails-for style fname)
+    `(ert-deftest ,(intern (format "%s-%d" name i)) ()
        ,(format "For input %s, %s" (truncate-string-to-width
                                     (format "%s" input)
                                     15 nil nil 'ellipsis)
@@ -97,7 +98,7 @@ Exits Emacs when finished. The exit code is the number of failed tests."
                      (ert-skip (format "test not applicable for style %s"
                                        style)))
                  (ert-pass)))))
-       (apply #',fname ',input)))
+       (apply #',fname ',input))))
 
 (defmacro def-slime-test (name args doc inputs &rest body)
   "Define a test case.
