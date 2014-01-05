@@ -11,14 +11,10 @@ install:
   - sudo apt-get install emacs
   - sudo apt-get -t raring install libgnutls26
   - sudo apt-get install emacs-snapshot-nox
-  - curl -O https://raw.github.com/ohler/ert/c619b56c5bc6a866e33787489545b87d79973205/lisp/emacs-lisp/ert.el
-  - curl -O https://raw.github.com/ohler/ert/c619b56c5bc6a866e33787489545b87d79973205/lisp/emacs-lisp/ert-x.el
-  - curl -o cl-lib.el http://elpa.gnu.org/packages/cl-lib-0.3.el
 before_script:
 script:
-  - EMACS_BIN=emacs LISP_BIN=sbcl make check-core
-  - rm ert.el; rm ert-x.el; rm cl-lib.el
-  - EMACS_BIN=emacs-snapshot LISP_BIN=sbcl make check-core
+  - USE_TEMP_DIR=yes EMACS_BIN=emacs          LISP_BIN=sbcl make check-core
+  - USE_TEMP_DIR=yes EMACS_BIN=emacs-snapshot LISP_BIN=sbcl make check-core
 notifications:
   email:
     - slime-devel@common-lisp.net
