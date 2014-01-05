@@ -1,0 +1,4 @@
+*.elc
+cl-lib.el
+ert.el
+ert-x.el
