@@ -9,7 +9,7 @@ OBJ_FILES = $(patsubst contrib/%.el,contrib/%.elc,$(wildcard contrib/*.el))
 ifeq ($(shell $(EMACS_BIN) --version | grep -E 24.\(3.5\|4\)),)
     COLON =
 else
-    COLON =
+    COLON = :
 endif
 LOAD_PATH=-L $(COLON)$(PWD) -L $(COLON)$(PWD)/contrib
 
@@ -30,15 +30,31 @@ compile-%: slime.elc slime-tests.elc contrib/slime-%.elc
 SELECTOR ?=t
 OPTIONS ?=--batch
 
+
+EMACS_23=$(shell $(EMACS_BIN) --version | grep -E 23)
+ERT=https://raw.github.com/ohler/ert/c619b56c5bc6a866e33787489545b87d79973205/lisp/emacs-lisp/ert.el
+ERTX=https://raw.github.com/ohler/ert/c619b56c5bc6a866e33787489545b87d79973205/lisp/emacs-lisp/ert-x.el
+CL_LIB=http://elpa.gnu.org/packages/cl-lib-0.3.el
+
 check-%: export TEST_CONTRIBS=$(patsubst check-%,slime-%,$@)
 check-%: compile-%
 	TEST_CONTRIBS=$(TEST_CONTRIBS) $(MAKE) check
-check: clean-fasls
-	${EMACS_BIN} -Q $(LOAD_PATH) $(OPTIONS)			           \
-		     --eval "(require 'slime-tests)"	                   \
-		     --eval "(slime-setup '($(TEST_CONTRIBS)))"		   \
-		     --eval "(setq inferior-lisp-program \"$(LISP_BIN)\")" \
-		     --eval "(slime-batch-test $(SELECTOR))"
+check:
+	if [ -n $(USE_TEMP_DIR) ]; then						    \
+		temp_dir=`mktemp -d --suffix=-slime`				   ;\
+		git clone $(PWD) $$temp_dir					   ;\
+		cd $$temp_dir							   ;\
+		[ -n "$(EMACS_23)" ] && curl -O $(ERT)				   ;\
+		[ -n "$(EMACS_23)" ] && curl -O $(ERTX)				   ;\
+		[ -n "$(EMACS_23)" ] && curl -o cl-lib.el $(CL_LIB)		   ;\
+		USE_TEMP_DIR= $(MAKE) check-core				   ;\
+	else									    \
+	        ${EMACS_BIN} -Q $(LOAD_PATH) $(OPTIONS)			            \
+			     --eval "(require 'slime-tests)"			    \
+			     --eval "(slime-setup '($(TEST_CONTRIBS)))"		    \
+			     --eval "(setq inferior-lisp-program \"$(LISP_BIN)\")"  \
+	         	     --eval "(slime-batch-test $(SELECTOR))"		   ;\
+	fi
 
 check-core: export TEST_CONTRIBS=
 check-core: compile-core check
