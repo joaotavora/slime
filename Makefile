@@ -23,30 +23,43 @@ LOAD_PATH=-L $(COLON). -L $(COLON)./contrib
 
 # Dependencies
 #
-ensure_cl_lib:
+ensure-cl-lib:
 	[ -f cl-lib.el ] || curl -o cl-lib.el $(CL_LIB)
+clean-cl-lib:
+	rm -f cl-lib.el
 
-ensure_ert:
+ensure-ert:
 	[ -f ert.el ]    || curl -o ert.el $(ERT)
 	[ -f ert-x.el ]  || curl -o ert-x.el $(ERT)
+clean-ert:
+	rm -f ert*.el
+
+# Autoloads
+#
+autoloads: clean-cl-lib clean-ert
+	rm -f slime-autoloads.el
+	$(EMACS_BIN) -Q --batch					\
+		--eval "(setq generated-autoload-file			\
+			\"$(PWD)/slime-autoloads.el\")"		\
+		-f batch-update-autoloads .
 
 # Compilation
 #
 %.elc: %.el
 	${EMACS_BIN} -Q $(LOAD_PATH) --batch \
 		-f batch-byte-compile $<
-compile: ensure_cl_lib
+compile: ensure-cl-lib
 	${EMACS_BIN} -Q $(LOAD_PATH) --batch \
 		--eval "(batch-byte-recompile-directory 0)" .
 
 # Automated tests
 #
-SELECTOR=t
-OPTIONS=--batch
+SELECTOR ?=t
+CHECK_OPTIONS ?=--batch
 
 $(CONTRIBS:%=check-%): TEST_CONTRIBS=$(patsubst check-%,slime-%,$@)
-$(CONTRIBS:%=check-%) check: ensure_ert compile
-	${EMACS_BIN} -Q $(LOAD_PATH) $(OPTIONS)			\
+$(CONTRIBS:%=check-%) check: ensure-ert compile
+	${EMACS_BIN} -Q $(LOAD_PATH) $(CHECK_OPTIONS)			\
 		--eval "(require 'slime-tests)"			\
 		--eval "(slime-setup '($(TEST_CONTRIBS)))"		\
 		--eval "(setq inferior-lisp-program \"$(LISP_BIN)\")"	\
@@ -100,7 +113,7 @@ elpa: elpa-slime elpa-contribs
 #
 clean-fasls:
 	rm -rf *.fasl contrib/*.fasl
-clean: clean-fasls
+clean: clean-fasls clean-ert clean-cl-lib
 	rm -rf *.elc contrib/*.elc
 
 # Legacy dists
@@ -116,4 +129,4 @@ doc-%:
 	cd doc && $(MAKE) $(DOCTARGET)
 doc: doc-all
 
-.PHONY: clean elpa compile check doc dist
+.PHONY: clean elpa compile check doc dist autoloads

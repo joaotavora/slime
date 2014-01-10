@@ -95,10 +95,13 @@ The default value is automatically computed from the location of the
 Emacs Lisp package."))
 
 (defvar slime-lisp-modes '(lisp-mode))
+
+;;;###autoload
 (defvar slime-contribs nil
   "A list of contrib packages to load with slime.")
+;;;###autoload
 (define-obsolete-variable-alias 'slime-setup-contribs
-'slime-contribs "2.3.2")
+  'slime-contribs "2.3.2")
 
 (defun slime-setup (&optional contribs)
   "Setup Emacs so that lisp-mode buffers always use SLIME.
@@ -121,7 +124,11 @@ CONTRIBS is a list of contrib packages to load. If `nil', use
         (let ((init (intern (format "%s-init" c))))
           (when (fboundp init)
             (funcall init)))))))
+
+;;;###autoload
 (defun slime-lisp-mode-hook ()
+  ;; JT@2014/01/09: FIXME, probably can get rid of this add just add
+  ;; `slime-mode' to `lisp-mode-hook'.
   (slime-mode 1)
   (set (make-local-variable 'lisp-indent-function)
        'common-lisp-indent-function))
@@ -402,6 +409,7 @@ more easily. See `slime-init-keymaps'.")
 (defvar slime-dispatching-connection)
 (defvar slime-current-thread)
 
+;;;###autoload
 (define-minor-mode slime-mode
   "\\<slime-mode-map>\
 SLIME: The Superior Lisp Interaction Mode for Emacs (minor-mode).
@@ -1091,6 +1099,7 @@ See `slime-lisp-implementations'")
 (defvar slime-net-processes)
 (defvar slime-default-connection)
 
+;;;###autoload
 (defun slime (&optional command coding-system)
   "Start an inferior^_superior Lisp and connect to its Swank server."
   (interactive)
@@ -1202,6 +1211,7 @@ DIRECTORY change to this directory before starting the process.
 (defun slime-start* (options)
   (apply #'slime-start options))
 
+;;;###autoload
 (defun slime-connect (host port &optional _coding-system interactive-p)
   "Connect to a running Swank server. Return the connection."
   (interactive (list (read-from-minibuffer
@@ -8137,6 +8147,9 @@ If they are not, position point at the first syntax error found."
           slime-forward-cruft
           slime-forward-reader-conditional
           )))
+
+;;;; Setup any contribs
+(slime-setup)
 
 (provide 'slime)
 
