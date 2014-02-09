@@ -84,7 +84,8 @@ Exits Emacs when finished. The exit code is the number of failed tests."
             (let ((file-name (or load-file-name
                                  byte-compile-current-file)))
               (if (and file-name
-                       (string-match "contrib/slime-\\(.*\\)\.elc?$" file-name))
+                       (string-match "contrib/test/slime-\\(.*\\)-tests\.elc?$"
+                                     file-name))
                   (list 'contrib (intern (match-string 1 file-name)))
                 '(core)))))
   
@@ -177,8 +178,6 @@ conditions (assertions)."
 
 
 ;;;;; Test case definitions
-;; Clear out old tests.
-(setq slime-tests nil)
 
 (defun slime-check-top-level () ;(&optional _test-name)
   (slime-accept-process-output nil 0.001)

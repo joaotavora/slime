@@ -110,19 +110,20 @@ CONTRIBS is a list of contrib packages to load. If `nil', use
   (when (member 'lisp-mode slime-lisp-modes)
     (add-hook 'lisp-mode-hook 'slime-lisp-mode-hook))
   (when contribs
-    (setq slime-setup-contribs contribs))
+    (setq slime-contribs contribs))
   (slime--setup-contribs))
 
 (defun slime--setup-contribs ()
   "Load and initialize contribs."
-  (when slime-setup-contribs
+  (when slime-contribs
     (add-to-list 'load-path (expand-file-name "contrib" slime-path))
     (dolist (c slime-contribs)
       (unless (featurep c)
-        (require c)
-        (let ((init (intern (format "%s-init" c))))
-          (when (fboundp init)
-            (funcall init)))))))
+        (require c))
+      (let ((init (intern (format "%s-init" c))))
+        (if (fboundp init)
+            (funcall init)
+          (warn "contrib %s doesn't have an init function" c))))))
 
 (defun slime-lisp-mode-hook ()
   (slime-mode 1)

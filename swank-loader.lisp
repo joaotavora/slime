@@ -32,18 +32,20 @@
   "The directory where to look for the source.")
 
 (defparameter *sysdep-files*
-  #+cmu '(swank-source-path-parser swank-source-file-cache swank-cmucl)
-  #+scl '(swank-source-path-parser swank-source-file-cache swank-scl)
-  #+sbcl '(swank-source-path-parser swank-source-file-cache
-           swank-sbcl swank-gray)
-  #+clozure '(metering swank-ccl swank-gray)
-  #+lispworks '(swank-lispworks swank-gray)
-  #+allegro '(swank-allegro swank-gray)
-  #+clisp '(xref metering swank-clisp swank-gray)
-  #+armedbear '(swank-abcl)
-  #+cormanlisp '(swank-corman swank-gray)
-  #+ecl '(swank-source-path-parser swank-source-file-cache
-          swank-ecl swank-gray))
+  #+cmu '(lib/swank-source-path-parser lib/swank-source-file-cache
+          backend/swank-cmucl)
+  #+scl '(lib/swank-source-path-parser lib/swank-source-file-cache
+          backend/swank-scl)
+  #+sbcl '(lib/swank-source-path-parser lib/swank-source-file-cache
+           backend/swank-sbcl lib/swank-gray)
+  #+clozure '(lib/metering backend/swank-ccl lib/swank-gray)
+  #+lispworks '(backend/swank-lispworks lib/swank-gray)
+  #+allegro '(backend/swank-allegro lib/swank-gray)
+  #+clisp '(lib/xref lib/metering backend/swank-clisp lib/swank-gray)
+  #+armedbear '(backend/swank-abcl)
+  #+cormanlisp '(backend/swank-corman lib/swank-gray)
+  #+ecl '(lib/swank-source-path-parser lib/swank-source-file-cache
+          backend/swank-ecl lib/swank-gray))
 
 (defparameter *implementation-features*
   '(:allegro :lispworks :sbcl :clozure :cmu :clisp :ccl :corman :cormanlisp
@@ -140,9 +142,15 @@ Return nil if nothing appropriate is available."
 
 (defun binary-pathname (src-pathname binary-dir)
   "Return the pathname where SRC-PATHNAME's binary should be compiled."
-  (let ((cfp (compile-file-pathname src-pathname)))
+  (let* ((cfp (compile-file-pathname src-pathname))
+         (mismatch (mismatch (pathname-directory src-pathname)
+                             (pathname-directory *source-directory*)))
+         (relative (and mismatch
+                        (nthcdr mismatch (pathname-directory src-pathname)))))
     (merge-pathnames (make-pathname :name (pathname-name cfp)
-                                    :type (pathname-type cfp))
+                                    :type (pathname-type cfp)
+                                    :directory (append (pathname-directory binary-dir)
+                                                       relative))
                      binary-dir)))
 
 (defun handle-swank-load-error (condition context pathname)
@@ -211,12 +219,16 @@ If LOAD is true, load the fasl file."
 
 (defun src-files (names src-dir)
   (mapcar (lambda (name)
-            (make-pathname :name (string-downcase name) :type "lisp"
-                           :defaults src-dir))
+            (let ((relative (pathname (string-downcase name))))
+              (make-pathname :name (pathname-name relative) :type "lisp"
+                             :directory (append (pathname-directory src-dir)
+                                                (cdr
+                                                 (pathname-directory relative)))
+                             :defaults src-dir)))
           names))
 
-(defvar *swank-files*
-  `(swank-backend ,@*sysdep-files* swank-match swank-rpc swank))
+(defparameter *swank-files*
+  `(lib/swank-backend ,@*sysdep-files* lib/swank-match lib/swank-rpc lib/swank))
 
 (defvar *contribs*
   '(swank-util swank-repl
@@ -257,7 +269,7 @@ If LOAD is true, load the fasl file."
           (delete-file fasl))))))
 
 (defun compile-contribs (&key (src-dir (contrib-dir *source-directory*))
-                           (fasl-dir (contrib-dir *fasl-directory*))
+                           (fasl-dir *fasl-directory*)
                            (swank-src-dir *source-directory*)
                            load quiet)
   (let* ((swank-src-files (src-files *swank-files* swank-src-dir))
