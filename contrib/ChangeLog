@@ -1,5 +1,9 @@
 2014-02-23  João Távora  <joaotavora@gmail.com>
 
+	* test/slime-presentations-tests.el: Renamed from incorrectly
+	named test/slime-presentation-tests.el. Won't otherwise be run
+	from Travis CI.
+
 	* test/slime-indentation-tests.el: New file. Defines ERT
 	indentation tests from specs in `slime-cl-indent-test.txt'.
 
