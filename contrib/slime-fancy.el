@@ -18,20 +18,6 @@
                        slime-references
                        slime-package-fu
                        slime-fontifying-fu
-                       slime-trace-dialog)
-  (:on-load
-   (slime-trace-dialog-init)
-   (slime-repl-init)
-   (slime-autodoc-init)
-   (slime-c-p-c-init)
-   (slime-editing-commands-init)
-   (slime-fancy-inspector-init)
-   (slime-fancy-trace-init)
-   (slime-fuzzy-init)
-   (slime-presentations-init)
-   (slime-scratch-init)
-   (slime-references-init)
-   (slime-package-fu-init)
-   (slime-fontifying-fu-init)))
+                       slime-trace-dialog))
 
 (provide 'slime-fancy)
