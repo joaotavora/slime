@@ -262,4 +262,13 @@ program.")
         (swank::inspect-object obj)
         (error "No object found with ~a, ~a and ~a" trace-id part-id type))))
 
+;; HACK: (sort of) Insinuate ourselves in swank-presentations.lisp
+;; TODO: Finish this.
+;;
+(push 'lookup-trace-part swank::*presented-object-lookup-fns*)
+
+(defun lookup-trace-part (id)
+  (and (eq (car id) :trace-part)
+       (apply #'find-trace-part (rest id))))
+
 (provide :swank-trace-dialog)

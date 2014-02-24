@@ -46,6 +46,11 @@ If OBJECT was saved previously return the old id."
           (setf (gethash object *object-to-presentation-id*) id)
           id))))
 
+(defparameter *presented-object-lookup-fns* nil
+  "List of functions taking an id and returning objects for presenting.
+This list is tried in order, the first function to return an object
+wins.")
+
 (defslimefun lookup-presented-object (id)
   "Retrieve the object corresponding to ID.
 The secondary value indicates the absence of an entry."
@@ -76,7 +81,9 @@ The secondary value indicates the absence of an entry."
           (:no-error (value)
             (values value t))))
        ((:inspected-part part-index)
-        (inspector-nth-part part-index))))))
+        (inspector-nth-part part-index))
+       (t
+        (some #'funcall *presented-object-lookup-fns*))))))
 
 (defslimefun lookup-presented-object-or-lose (id)
   "Get the result of the previous REPL evaluation with ID."
