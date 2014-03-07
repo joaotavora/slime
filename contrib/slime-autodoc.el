@@ -43,6 +43,15 @@
   :type 'integer
   :group 'slime-ui)
 
+(defun slime-autodoc-maybe-enable ()
+  (when slime-use-autodoc-mode
+    (slime-autodoc-mode 1)
+    (setq slime-echo-arglist-function
+          (lambda ()
+            (if slime-autodoc-mode
+                (eldoc-message (slime-autodoc))
+              (slime-show-arglist))))))
+
 
 
 (defun slime-arglist (name)
