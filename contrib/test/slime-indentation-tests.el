@@ -26,7 +26,7 @@
              (while (> n 0) (cl-decf n) (insert " ")))))))
     (buffer-string))
 
-(eval-and-compile
+(eval-when-compile
   (defun slime-indentation-test-form (test-name bindings expected)
     `(define-slime-ert-test ,test-name ()
        ,(format "An indentation test named `%s'" test-name)
