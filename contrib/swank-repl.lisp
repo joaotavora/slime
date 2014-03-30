@@ -171,6 +171,12 @@ This is an optimized way for Lisp to deliver output to Emacs."
         (funcall *listener-eval-function* string))
       (funcall *listener-eval-function* string)))
 
+(defslimefun listener-eval-for-part (interface-fn args)
+  ;; Eval the application of INTERFACE-FN to ARGS in the REPL listener.
+  (listener-eval (let ((*package* (find-package :keyword)))
+                   (write-to-string
+                    `(nth-value 0 (apply #',interface-fn ',args))))))
+
 (defvar *last-repl-form* nil)
 (defvar *last-repl-values* nil)
 

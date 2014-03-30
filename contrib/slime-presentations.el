@@ -446,12 +446,8 @@ Also return the start position, end position, and buffer of the presentation."
 
 (defun slime-copy-presentation-to-repl (presentation start end buffer)
   (with-current-buffer buffer
-    (slime-repl-send-string
-     (format "%s"
-             `(cl:nth-value
-               0
-               (swank:lookup-presented-object
-                ',(slime-presentation-id presentation)))))
+    (slime-repl-copy-part
+     'swank:lookup-presented-object (list (slime-presentation-id presentation)))
     (slime-repl)))
 
 (defun slime-copy-presentation-at-mouse-to-repl (event)

@@ -1572,22 +1572,26 @@ expansion will be added to the REPL's history.)"
           (t
            (error "Not in a function definition")))))))
 
+(defun slime-repl-copy-part (interface args &optional callback)
+  (let ((callback (or callback
+                      #'slime-repl-insert-result)))
+    (slime-eval-async
+      `(swank:listener-eval-for-part ',interface
+                                     ',args)
+      callback)))
+
 (defun slime-inspector-copy-down-to-repl (number)
   "Evaluate the inspector slot at point via the REPL (to set `*')."
   (interactive (list (or (get-text-property (point) 'slime-part-number)
                          (error "No part at point"))))
-  (slime-repl-send-string
-   (format "%s" `(cl:nth-value 0 (swank:inspector-nth-part ,number))))
+  (slime-repl-copy-part 'swank:inspector-nth-part (list number))
   (slime-repl))
 
 (defun sldb-copy-down-to-repl (frame-id var-id)
   "Evaluate the frame var at point via the REPL (to set `*')."
   (interactive (list (sldb-frame-number-at-point) (sldb-var-number-at-point)))
-  (slime-repl-send-string
-   (format "%s"
-           `(cl:prog1 (swank-backend:frame-var-value
-                       ,frame-id ,var-id)
-                      (swank:set-repl-variables))))
+  (slime-repl-copy-part
+   'swank-backend:frame-var-value (list frame-id var-id))
   (slime-repl))
 
 (defun sldb-insert-frame-call-to-repl ()
