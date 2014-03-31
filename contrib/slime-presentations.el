@@ -443,11 +443,39 @@ Also return the start position, end position, and buffer of the presentation."
       (when presentation
         (slime-M-.-presentation presentation start end (current-buffer) where)))))
 
+(defvar slime-presentations-copy-to-point nil)
+
+(defun slime-presentations--copy-to-point (saved-input point-offset)
+  (let ((new-presentation (slime-presentation-around-or-before-point
+                           (1- slime-output-end))))
+    (slime-repl-insert-result nil) ;; basically just the prompt
+    (when (cl-first new-presentation) 
+      (insert saved-input)
+      (let* ((beg (cl-second new-presentation))
+             (end (cl-third new-presentation))
+             (presentation-text (buffer-substring beg end)))
+        (delete-region beg end)
+        (save-excursion
+          (goto-char beg)
+          (insert ";; inserting presentation at point"))
+        (when (cl-plusp point-offset) (goto-char (+ slime-repl-input-start-mark
+                                                    point-offset)))
+        (insert presentation-text)))))
 
 (defun slime-copy-presentation-to-repl (presentation start end buffer)
-  (with-current-buffer buffer
-    (slime-repl-copy-part
-     'swank:lookup-presented-object (list (slime-presentation-id presentation)))
+  (with-current-buffer (slime-output-buffer)
+    (lexical-let ((saved-input (buffer-substring slime-repl-input-start-mark
+                                                 (point-max)))
+                  (point-offset (- (point) slime-repl-input-start-mark))
+                  (inhibit-read-only t))
+      (delete-region slime-repl-input-start-mark (point-max))
+      (with-current-buffer buffer
+        (slime-repl-copy-part
+         'swank:lookup-presented-object (list (slime-presentation-id presentation))
+         (and slime-presentations-copy-to-point
+              #'(lambda (result)
+                  (with-current-buffer (slime-output-buffer)
+                    (slime-presentations--copy-to-point saved-input point-offset)))))))
     (slime-repl)))
 
 (defun slime-copy-presentation-at-mouse-to-repl (event)
